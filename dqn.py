@@ -1,8 +1,8 @@
 import tensorflow as tf
 
-class DeepQNetwork(tf.keras.model):
+class DeepQNetwork(tf.keras.Model):
     def __init__(self, action_size, state_size):
-
+        super(DeepQNetwork, self).__init__()
         self.action_size = action_size
         self.state_size = state_size
 
