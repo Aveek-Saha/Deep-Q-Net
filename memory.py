@@ -13,30 +13,20 @@ class ReplayMemory():
         self.count = 0
         self.current = 0
 
-        # Pre-allocate memory
-        self.actions = np.empty(self.size, dtype=np.int32)
         self.rewards = np.empty(self.size, dtype=np.float32)
-        self.frames = np.empty((self.size, self.input_shape[0], self.input_shape[1]), dtype=np.uint8)
+        self.actions = np.empty(self.size, dtype=np.int32)
         self.terminal_flags = np.empty(self.size, dtype=np.bool)
+        self.frames = np.empty((self.size, self.input_shape[0], self.input_shape[1]), dtype=np.uint8)
         
-        # Pre-allocate memory for the states and new_states in a minibatch
+        self.indices = np.empty(self.batch_size, dtype=np.int32)
         self.states = np.empty((self.batch_size, self.agent_history_length, 
                                 self.input_shape[0], self.input_shape[1]), dtype=np.uint8)
         self.new_states = np.empty((self.batch_size, self.agent_history_length, 
                                     self.input_shape[0], self.input_shape[1]), dtype=np.uint8)
-        self.indices = np.empty(self.batch_size, dtype=np.int32)
 
     def add_experience(self, action, frame, reward, terminal, clip_reward=True):
-        """
-        Args:
-            action: An integer between 0 and env.action_space.n - 1 
-                determining the action the agent perfomed
-            frame: A (84, 84, 1) frame of an Atari game in grayscale
-            reward: A float determining the reward the agend received for performing an action
-            terminal: A bool stating whether the episode terminated
-        """
         if frame.shape != (self.input_shape[0], self.input_shape[1]):
-            raise ValueError('Dimension of frame is wrong!')
+            raise ValueError('Wrong Dimension!')
         
         if clip_reward:
             reward = np.sign(reward)
@@ -50,9 +40,9 @@ class ReplayMemory():
              
     def _get_state(self, index):
         if self.count is 0:
-            raise ValueError("The replay memory is empty!")
+            raise ValueError("No replay memory")
         if index < self.agent_history_length - 1:
-            raise ValueError("Index must be min 3")
+            raise ValueError("Index must be at least 3")
         return self.frames[index-self.agent_history_length+1:index+1, ...]
         
     def _get_valid_indices(self):
@@ -69,11 +59,8 @@ class ReplayMemory():
             self.indices[i] = index
             
     def get_minibatch(self):
-        """
-        Returns a minibatch of self.batch_size = 32 transitions
-        """
         if self.count < self.agent_history_length:
-            raise ValueError('Not enough memories to get a minibatch')
+            raise ValueError('Not enough for mini batch')
         
         self._get_valid_indices()
             
@@ -83,20 +70,17 @@ class ReplayMemory():
         
         return np.transpose(self.states, axes=(0, 2, 3, 1)), self.actions[self.indices], self.rewards[self.indices], np.transpose(self.new_states, axes=(0, 2, 3, 1)), self.terminal_flags[self.indices]
 
-    def save(self, folder_name):
-        """Save the replay buffer to a folder"""
+    def save(self, folder):
+        if not os.path.isdir(folder):
+            os.mkdir(folder)
 
-        if not os.path.isdir(folder_name):
-            os.mkdir(folder_name)
+        np.save(folder + '/actions.npy', self.actions)
+        np.save(folder + '/terminal_flags.npy', self.terminal_flags)
+        np.save(folder + '/rewards.npy', self.rewards)
+        np.save(folder + '/frames.npy', self.frames)
 
-        np.save(folder_name + '/actions.npy', self.actions)
-        np.save(folder_name + '/frames.npy', self.frames)
-        np.save(folder_name + '/rewards.npy', self.rewards)
-        np.save(folder_name + '/terminal_flags.npy', self.terminal_flags)
-
-    def load(self, folder_name):
-        """Loads the replay buffer from a folder"""
-        self.actions = np.load(folder_name + '/actions.npy')
-        self.frames = np.load(folder_name + '/frames.npy')
-        self.rewards = np.load(folder_name + '/rewards.npy')
-        self.terminal_flags = np.load(folder_name + '/terminal_flags.npy')
+    def load(self, folder):
+        self.actions = np.load(folder + '/actions.npy')
+        self.terminal_flags = np.load(folder + '/terminal_flags.npy')
+        self.rewards = np.load(folder + '/rewards.npy')
+        self.frames = np.load(folder + '/frames.npy')

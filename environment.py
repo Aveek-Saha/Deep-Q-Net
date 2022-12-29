@@ -12,7 +12,6 @@ class Environment():
         self.agent_history_length = agent_history_length
 
     def preprocess(self, frame, height, width):
-        # frame = tf.placeholder(shape=[210, 160, 3], dtype=tf.uint8)
         processed_frame = tf.image.rgb_to_grayscale(frame)
         processed_frame = tf.image.crop_to_bounding_box(processed_frame, 34, 0, 160, 160)
         processed_frame = tf.image.resize(processed_frame, [height, width], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
